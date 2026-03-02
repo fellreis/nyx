@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum GoalType {
+  BASIC
+  MONTHLY
+  ROLE
+}
+
+enum GoalStatus {
+  PENDING
+  DONE
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  name            String
+  role            Role           @default(USER)
+  isActive        Boolean        @default(true)
+  passwordHash    String         @map("password")
+  department      String?
+  roleTemplateId  Int?
+  progressHistory Json?
+  managerId       String?        @db.VarChar(36)
+  createdById     String?        @db.VarChar(36)
+  manager         User?          @relation("ManagerToTeam", fields: [managerId], references: [id])
+  team            User[]         @relation("ManagerToTeam")
+  createdUsers    User[]         @relation("CreatorToUser")
+  createdBy       User?          @relation("CreatorToUser", fields: [createdById], references: [id])
+  sessions        Session[]
+  goalsCreated    Goal[]         @relation("CreatedGoals")
+  goalsAssigned   Goal[]         @relation("AssignedGoals")
+  reviewsGiven    Review[]       @relation("Reviewer")
+  reviewsReceived Review[]       @relation("Reviewee")
+  notifications   Notification[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  rotatedAt DateTime?
+  userAgent String?
+  ip        String?
+}
+
+model Goal {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  type         GoalType
+  role         Role?
+  points       Int
+  dependsOnId  String?    @db.VarChar(36)
+  createdById  String     @db.VarChar(36)
+  assignedToId String     @db.VarChar(36)
+  status       GoalStatus @default(PENDING)
+  doneAt       DateTime?
+  meta         Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  createdBy  User   @relation("CreatedGoals", fields: [createdById], references: [id])
+  assignedTo User   @relation("AssignedGoals", fields: [assignedToId], references: [id])
+  dependsOn  Goal?  @relation("GoalDependencies", fields: [dependsOnId], references: [id])
+  dependents Goal[] @relation("GoalDependencies")
+  reviews    ReviewGoal[]
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  reviewerId String   @db.VarChar(36)
+  revieweeId String   @db.VarChar(36)
+  comments   String?
+  summary    String
+  score      Int?
+  meta       Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  reviewer User         @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewee User         @relation("Reviewee", fields: [revieweeId], references: [id])
+  goals    ReviewGoal[]
+}
+
+model ReviewGoal {
+  reviewId  String   @db.VarChar(36)
+  goalId    String   @db.VarChar(36)
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  goal   Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@id([reviewId, goalId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String    @db.VarChar(36)
+  message   String
+  readAt    DateTime?
+  meta      Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

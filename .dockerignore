@@ -1,0 +1,28 @@
+node_modules
+**/node_modules
+dist
+build
+.next
+.turbo
+.DS_Store
+*.log
+pnpm-debug.log*
+npm-debug.log*
+yarn-error.log
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker/
+!docker/web-entrypoint.sh
+
+# Env files
+.env
+.env.local
+.env.*.local
+**/*.env
+!apps/web/.env
