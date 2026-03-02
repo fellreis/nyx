@@ -209,6 +209,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
 
             // ── NYX logo as base64 PNG (white on transparent) ──
             const NYX_LOGO_B64 = 'data:image/png;base64,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';
+            const NYX_LOGO_RAW = NYX_LOGO_B64.replace(/^data:image\/\w+;base64,/, '');
 
             // ── Bold color palette (Strava / dashboard inspired) ──
             type C3 = [number, number, number];
@@ -269,7 +270,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
 
             // Top bar — logo image + brand tag
             fill(0, 0, pW, 56, [10, 10, 10] as C3);
-            try { doc.addImage(NYX_LOGO_B64, 'PNG', 24, 12, 80, 32); } catch { txt('NYX', 32, 38, 22, c.white, true); }
+            try { doc.addImage(NYX_LOGO_RAW, 'PNG', 24, 12, 80, 32); } catch { txt('NYX', 32, 38, 22, c.white, true); }
             txt('#PERFORMANCE', pW - 32, 38, 14, c.nyxGreen, true, 'right');
             y = 64;
 
@@ -282,7 +283,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             });
 
             if (pillarData.length > 0) {
-                const pillarSection = 260;
+                const pillarSection = 220;
                 const pillarTop = y + 8;
                 const pillarBottom = y + pillarSection - 24;
                 const pillarH = pillarBottom - pillarTop;
@@ -358,7 +359,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
 
             // === STAT CARDS GRID (2x2 layout with bold colors) ===
             const cardW = (pW - 32 * 3) / 2;
-            const cardH = 100;
+            const cardH = 90;
             const gap = 12;
 
             // Card 1 — Total Score (hot pink)
@@ -404,14 +405,21 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                 taskEntries.forEach(([taskId, score]) => {
                     const taskTitle = goalLookup[taskId] || `Goal ${taskId}`;
                     const clr = scoreColor(score);
-                    const truncated = taskTitle.length > 36 ? taskTitle.slice(0, 34) + '…' : taskTitle;
+
+                    // Check page overflow
+                    if (y + 46 > pH - 40) { doc.addPage(); fill(0, 0, pW, pH, c.black); y = 40; }
 
                     // Score circle
                     rRect(32, y, 34, 28, 6, clr);
                     txt(String(score), 49, y + 20, 14, score >= 4 && score < 7 ? c.black : c.white, true, 'center');
 
-                    // Task name
-                    txt(truncated, 78, y + 12, 10, c.offWhite, false);
+                    // Task name — wrap long titles
+                    const titleMaxW = pW - 78 - 200;
+                    const titleLines: string[] = doc.splitTextToSize(taskTitle, titleMaxW);
+                    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...c.offWhite);
+                    titleLines.slice(0, 2).forEach((line: string, li: number) => {
+                        doc.text(line, 78, y + 12 + li * 12);
+                    });
 
                     // Score dots (1-10)
                     for (let d = 1; d <= 10; d++) {
@@ -422,11 +430,16 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
 
                     // Feedback below if exists
                     const fb = review.taskFeedback?.[taskId]?.trim();
+                    const titleExtra = Math.max(titleLines.slice(0, 2).length - 1, 0) * 12;
                     if (fb) {
-                        txt(fb.length > 70 ? fb.slice(0, 68) + '…' : fb, 78, y + 26, 8, c.midGray, false);
-                        y += 36;
+                        const fbLines: string[] = doc.splitTextToSize(fb, pW - 78 - 48);
+                        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...c.midGray);
+                        fbLines.slice(0, 2).forEach((line: string, li: number) => {
+                            doc.text(line, 78, y + 26 + titleExtra + li * 10);
+                        });
+                        y += 36 + titleExtra + Math.max(fbLines.slice(0, 2).length - 1, 0) * 10;
                     } else {
-                        y += 32;
+                        y += 32 + titleExtra;
                     }
                 });
             }
@@ -470,13 +483,13 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             // ═══════════════════════════════════════════════════════
             // PAGE 2: CUMULATIVE PERFORMANCE — FUN CHARTS
             // ═══════════════════════════════════════════════════════
-            if (history.length > 1) {
+            if (history.length > 0) {
                 doc.addPage();
                 fill(0, 0, pW, pH, c.offWhite);
 
                 // Top colored stripe with logo
                 fill(0, 0, pW, 56, c.black);
-                try { doc.addImage(NYX_LOGO_B64, 'PNG', 24, 12, 80, 32); } catch { txt('NYX', 32, 38, 22, c.white, true); }
+                try { doc.addImage(NYX_LOGO_RAW, 'PNG', 24, 12, 80, 32); } catch { txt('NYX', 32, 38, 22, c.white, true); }
                 txt('PERFORMANCE OVER TIME', pW - 32, 38, 12, c.nyxGreen, true, 'right');
                 y = 80;
 
@@ -597,7 +610,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
 
             // Header stripe with logo
             fill(0, 0, pW, 60, c.black);
-            try { doc.addImage(NYX_LOGO_B64, 'PNG', 24, 14, 60, 24); } catch { txt('NYX', 32, 36, 16, c.white, true); }
+            try { doc.addImage(NYX_LOGO_RAW, 'PNG', 24, 14, 60, 24); } catch { txt('NYX', 32, 36, 16, c.white, true); }
             txt(monthLabel.toUpperCase(), 100, 36, 14, c.nyxGreen, true);
             txt(`${employee.name}  ·  ${employee.department}`, pW - 32, 36, 10, c.midGray, false, 'right');
             y = 80;
@@ -668,6 +681,36 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                     y += 18;
                 });
             }
+
+            // ═══════════════════════════════════════════════════════════
+            // SIGNATURE SECTION
+            // ═══════════════════════════════════════════════════════════
+            if (y + 160 > pH - 30) { doc.addPage(); fill(0, 0, pW, pH, c.white); y = 40; }
+
+            y += 20;
+            fill(32, y, pW - 64, 2, c.black); y += 24;
+            txt('SIGNATURES', 32, y, 12, c.black, true); y += 30;
+
+            // Employee signature
+            txt('Employee:', 32, y, 10, c.darkGray, true);
+            txt(employee.name, 32, y + 14, 10, c.midGray);
+            y += 40;
+            doc.setDrawColor(...c.midGray); doc.setLineWidth(0.8);
+            doc.line(32, y, pW / 2 - 20, y);
+            txt('Signature', 32, y + 14, 8, c.midGray);
+            txt('Date: ____/____/________', pW / 2 - 160, y + 14, 8, c.midGray);
+
+            y += 50;
+
+            // Manager signature
+            const managerName = currentUser?.name || 'Manager';
+            txt('Reviewed by:', 32, y, 10, c.darkGray, true);
+            txt(managerName, 32, y + 14, 10, c.midGray);
+            y += 40;
+            doc.setDrawColor(...c.midGray); doc.setLineWidth(0.8);
+            doc.line(32, y, pW / 2 - 20, y);
+            txt('Signature', 32, y + 14, 8, c.midGray);
+            txt('Date: ____/____/________', pW / 2 - 160, y + 14, 8, c.midGray);
 
             // ── Save & Email ──
             const fileName = `${employee.name.replace(/\s+/g, '_')}_Review_${review.month}.pdf`;
