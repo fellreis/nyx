@@ -206,100 +206,474 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             const pageHeight = doc.internal.pageSize.getHeight();
             const pageWidth = doc.internal.pageSize.getWidth();
             const margin = 40;
+            const contentWidth = pageWidth - margin * 2;
             const lineHeight = 16;
             let y = margin;
 
-            const ensureSpace = (lines: number) => {
-                if (y + lineHeight * lines > pageHeight - margin) {
+            // ── Color palette ──
+            const colors = {
+                brand: [109, 40, 217] as [number, number, number],
+                brandLight: [237, 233, 254] as [number, number, number],
+                green: [34, 197, 94] as [number, number, number],
+                yellow: [234, 179, 8] as [number, number, number],
+                red: [239, 68, 68] as [number, number, number],
+                gray: [107, 114, 128] as [number, number, number],
+                grayLight: [229, 231, 235] as [number, number, number],
+                grayDark: [55, 65, 81] as [number, number, number],
+                white: [255, 255, 255] as [number, number, number],
+                black: [17, 24, 39] as [number, number, number],
+                blue: [59, 130, 246] as [number, number, number],
+                orange: [249, 115, 22] as [number, number, number],
+                teal: [20, 184, 166] as [number, number, number],
+            };
+            const chartColors = [colors.brand, colors.blue, colors.green, colors.orange, colors.teal, colors.red, colors.yellow];
+
+            const scoreColor = (s: number): [number, number, number] => s >= 7 ? colors.green : s >= 4 ? colors.yellow : colors.red;
+
+            // ── Helpers ──
+            const ensureSpace = (needed: number) => {
+                if (y + needed > pageHeight - margin) {
                     doc.addPage();
                     y = margin;
                 }
             };
 
-            const addText = (text: string, options?: { size?: number; bold?: boolean }) => {
-                const size = options?.size ?? 12;
-                const bold = options?.bold ?? false;
+            const addText = (text: string, opts?: { size?: number; bold?: boolean; color?: [number, number, number]; align?: 'left' | 'center' | 'right'; maxWidth?: number }) => {
+                const size = opts?.size ?? 10;
+                const bold = opts?.bold ?? false;
+                const color = opts?.color ?? colors.black;
+                const align = opts?.align ?? 'left';
+                const maxW = opts?.maxWidth ?? contentWidth;
                 doc.setFont('helvetica', bold ? 'bold' : 'normal');
                 doc.setFontSize(size);
-                const wrapped = doc.splitTextToSize(text, pageWidth - margin * 2);
+                doc.setTextColor(...color);
+                const wrapped = doc.splitTextToSize(text, maxW);
                 wrapped.forEach((line: string) => {
-                    ensureSpace(1);
-                    doc.text(line, margin, y);
+                    ensureSpace(lineHeight);
+                    const xPos = align === 'center' ? pageWidth / 2 : align === 'right' ? pageWidth - margin : margin;
+                    doc.text(line, xPos, y, { align });
                     y += lineHeight;
                 });
             };
 
             const addSection = (title: string) => {
-                ensureSpace(2);
-                y += 4;
-                addText(title, { size: 13, bold: true });
+                ensureSpace(30);
+                y += 8;
+                doc.setDrawColor(...colors.brand);
+                doc.setLineWidth(2);
+                doc.line(margin, y, margin + 40, y);
+                y += 12;
+                addText(title, { size: 13, bold: true, color: colors.grayDark });
+                y += 2;
             };
 
-        const monthLabel = formatMonthLabel(review.month);
-        const reviewedAt = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Not available';
+            const drawRoundedRect = (x: number, ry: number, w: number, h: number, r: number, fill: [number, number, number], border?: [number, number, number]) => {
+                doc.setFillColor(...fill);
+                if (border) { doc.setDrawColor(...border); doc.setLineWidth(0.5); }
+                doc.roundedRect(x, ry, w, h, r, r, border ? 'FD' : 'F');
+            };
+
+            // ── Gather history data ──
+            const allReviews = [...(employee.reviews || []), review].sort((a, b) => a.month.localeCompare(b.month));
+            const uniqueMonthReviews: Review[] = [];
+            const seenMonths = new Set<string>();
+            for (const r of allReviews) {
+                if (!seenMonths.has(r.month)) {
+                    seenMonths.add(r.month);
+                    uniqueMonthReviews.push(r);
+                }
+            }
+
+            const history = [...employee.progressHistory].sort((a, b) => a.date.localeCompare(b.date));
+            // Ensure current month is in history
+            const currentEntry = history.find(h => h.date === review.month);
+            if (!currentEntry) {
+                const lastH = history[history.length - 1] || { score: 0, tasksCompleted: 0 };
+                history.push({ date: review.month, score: lastH.score + review.score, tasksCompleted: lastH.tasksCompleted + review.completedTaskIds.length });
+            }
+
+            const monthLabel = formatMonthLabel(review.month);
+            const reviewedAt = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Not available';
             const completedTasks = review.completedTaskIds.map(id => goalLookup[String(id)] || `Goal ${id}`);
             const pendingTasks = (review.pendingTaskIds || []).map(id => goalLookup[String(id)] || `Goal ${id}`);
             const categories = review.monthlyTaskCategoryDistribution || {};
             const roleProgress = review.roleGoalProgress || [];
 
-            addText('Performance Review Report', { size: 18, bold: true });
-            addText(`Employee: ${employee.name}`);
-            addText(`Department: ${employee.department}`);
-            addText(`Role: ${employee.role}`);
-        addText(`Review Month: ${monthLabel}`);
-        addText(`Reviewed At: ${reviewedAt}`);
-            addText(`Total Score: ${review.score}`);
-            addText(`Tasks Scored: ${review.completedTaskIds.length}`);
-            addText(`Tasks Pending: ${pendingTasks.length}`);
-            addText(`Generated: ${new Date().toLocaleString()}`);
+            // ═══════════════════════════════════════════════════════
+            // PAGE 1: COVER + SUMMARY CARD + SCORE GAUGE
+            // ═══════════════════════════════════════════════════════
+
+            // Header bar
+            drawRoundedRect(margin, y, contentWidth, 60, 6, colors.brand);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(20);
+            doc.setTextColor(...colors.white);
+            doc.text('Performance Review Report', margin + 16, y + 26);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${employee.name}  •  ${employee.department}  •  ${monthLabel}`, margin + 16, y + 46);
+            y += 76;
+
+            // Summary cards row
+            const cardW = (contentWidth - 20) / 3;
+            const cardH = 60;
+            const summaryCards = [
+                { label: 'Total Score', value: String(review.score), color: colors.brand },
+                { label: 'Tasks Scored', value: `${review.completedTaskIds.length} / ${review.completedTaskIds.length + pendingTasks.length}`, color: colors.green },
+                { label: 'Reviewed', value: reviewedAt, color: colors.blue },
+            ];
+            summaryCards.forEach((card, i) => {
+                const cx = margin + i * (cardW + 10);
+                drawRoundedRect(cx, y, cardW, cardH, 4, colors.white, colors.grayLight);
+                doc.setFillColor(...card.color);
+                doc.roundedRect(cx, y, 4, cardH, 2, 2, 'F');
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(...colors.gray);
+                doc.text(card.label, cx + 14, y + 22);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.setTextColor(...colors.black);
+                doc.text(card.value, cx + 14, y + 44);
+            });
+            y += cardH + 20;
+
+            // ── Current Review: Task Scores (horizontal bar chart) ──
+            if (review.taskScores && Object.keys(review.taskScores).length > 0) {
+                const taskEntries = Object.entries(review.taskScores);
+                const chartH = Math.max(taskEntries.length * 28 + 50, 100);
+                ensureSpace(chartH + 30);
+
+                addSection('Task Scores — This Review');
+                const chartTop = y;
+                const barAreaX = margin + 180;
+                const barMaxW = contentWidth - 190;
+
+                taskEntries.forEach(([taskId, score], i) => {
+                    const taskTitle = goalLookup[taskId] || `Goal ${taskId}`;
+                    const barY = chartTop + i * 28;
+                    const barW = (score / 10) * barMaxW;
+                    const clr = scoreColor(score);
+
+                    // Label
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(9);
+                    doc.setTextColor(...colors.grayDark);
+                    const truncated = taskTitle.length > 30 ? taskTitle.slice(0, 28) + '…' : taskTitle;
+                    doc.text(truncated, margin, barY + 12);
+
+                    // Bar background
+                    drawRoundedRect(barAreaX, barY + 2, barMaxW, 16, 3, colors.grayLight);
+                    // Bar fill
+                    if (barW > 0) {
+                        drawRoundedRect(barAreaX, barY + 2, Math.max(barW, 6), 16, 3, clr);
+                    }
+                    // Score label
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(9);
+                    doc.setTextColor(...colors.white);
+                    if (barW > 24) {
+                        doc.text(`${score}`, barAreaX + barW - 16, barY + 14);
+                    } else {
+                        doc.setTextColor(...clr);
+                        doc.text(`${score}`, barAreaX + barW + 6, barY + 14);
+                    }
+                });
+                y = chartTop + taskEntries.length * 28 + 10;
+
+                // Scale markers
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+                doc.setTextColor(...colors.gray);
+                [0, 2, 4, 6, 8, 10].forEach(v => {
+                    const xPos = barAreaX + (v / 10) * barMaxW;
+                    doc.text(String(v), xPos, y + 10, { align: 'center' });
+                });
+                y += 20;
+            }
+
+            // ── Task Feedback Details ──
+            if (review.taskFeedback && Object.values(review.taskFeedback).some(f => f.trim())) {
+                ensureSpace(60);
+                addSection('Task Feedback Details');
+                Object.entries(review.taskScores || {}).forEach(([taskId, score]) => {
+                    const feedback = review.taskFeedback?.[taskId]?.trim();
+                    if (!feedback) return;
+                    const taskTitle = goalLookup[taskId] || `Goal ${taskId}`;
+                    ensureSpace(40);
+                    const clr = scoreColor(score);
+                    doc.setFillColor(...clr);
+                    doc.circle(margin + 4, y + 4, 3, 'F');
+                    addText(`${taskTitle} (${score}/10)`, { size: 10, bold: true, color: colors.grayDark });
+                    addText(feedback, { size: 9, color: colors.gray });
+                    y += 4;
+                });
+            }
+
+            // ═══════════════════════════════════════════════════════
+            // CUMULATIVE CHARTS PAGE
+            // ═══════════════════════════════════════════════════════
+            if (history.length > 1) {
+                doc.addPage();
+                y = margin;
+
+                // Header
+                drawRoundedRect(margin, y, contentWidth, 36, 4, colors.brandLight);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(13);
+                doc.setTextColor(...colors.brand);
+                doc.text('Cumulative Performance Over Time', margin + 12, y + 24);
+                y += 52;
+
+                // ── Line chart: Cumulative Score ──
+                const chartW = contentWidth;
+                const chartH = 180;
+                const chartLeft = margin + 40;
+                const chartRight = margin + chartW - 10;
+                const chartTop = y + 20;
+                const chartBottom = y + chartH;
+                const drawW = chartRight - chartLeft;
+                const drawH = chartBottom - chartTop;
+
+                addText('Cumulative Score Trend', { size: 11, bold: true, color: colors.grayDark });
+                y += 4;
+
+                const scores = history.map(h => h.score);
+                const maxScore = Math.max(...scores, 10);
+                const yScale = (v: number) => chartBottom - (v / maxScore) * drawH;
+
+                // Grid
+                doc.setDrawColor(...colors.grayLight);
+                doc.setLineWidth(0.3);
+                const gridSteps = 5;
+                for (let i = 0; i <= gridSteps; i++) {
+                    const gy = chartBottom - (i / gridSteps) * drawH;
+                    doc.line(chartLeft, gy, chartRight, gy);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(7);
+                    doc.setTextColor(...colors.gray);
+                    const labelVal = Math.round((i / gridSteps) * maxScore);
+                    doc.text(String(labelVal), chartLeft - 6, gy + 3, { align: 'right' });
+                }
+
+                // Plot line
+                doc.setDrawColor(...colors.brand);
+                doc.setLineWidth(2);
+                const points: [number, number][] = history.map((h, i) => {
+                    const px = chartLeft + (i / Math.max(history.length - 1, 1)) * drawW;
+                    const py = yScale(h.score);
+                    return [px, py];
+                });
+                for (let i = 1; i < points.length; i++) {
+                    doc.line(points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]);
+                }
+
+                // Dots + labels
+                points.forEach(([px, py], i) => {
+                    doc.setFillColor(...colors.white);
+                    doc.setDrawColor(...colors.brand);
+                    doc.setLineWidth(1.5);
+                    doc.circle(px, py, 4, 'FD');
+                    doc.setFillColor(...colors.brand);
+                    doc.circle(px, py, 2, 'F');
+
+                    // Value label
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(8);
+                    doc.setTextColor(...colors.brand);
+                    doc.text(String(scores[i]), px, py - 10, { align: 'center' });
+
+                    // Month label
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(7);
+                    doc.setTextColor(...colors.gray);
+                    const mLabel = new Date(history[i].date + '-02T00:00:00Z').toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+                    doc.text(mLabel, px, chartBottom + 14, { align: 'center' });
+                });
+
+                y = chartBottom + 30;
+
+                // ── Bar chart: Monthly Scores (non-cumulative) ──
+                const monthlyScores = uniqueMonthReviews.map(r => ({ month: r.month, score: r.score, tasks: r.completedTaskIds.length }));
+
+                if (monthlyScores.length > 0) {
+                    const barChartH = 160;
+                    ensureSpace(barChartH + 60);
+                    y += 10;
+
+                    addText('Monthly Scores & Tasks Completed', { size: 11, bold: true, color: colors.grayDark });
+                    y += 4;
+
+                    const barChartTop = y + 10;
+                    const barChartBottom = y + barChartH;
+                    const barDrawH = barChartBottom - barChartTop;
+                    const barCount = monthlyScores.length;
+                    const groupW = drawW / Math.max(barCount, 1);
+                    const barW = Math.min(groupW * 0.3, 30);
+                    const maxMonthly = Math.max(...monthlyScores.map(m => m.score), ...monthlyScores.map(m => m.tasks), 10);
+
+                    // Grid
+                    doc.setDrawColor(...colors.grayLight);
+                    doc.setLineWidth(0.3);
+                    for (let i = 0; i <= 4; i++) {
+                        const gy = barChartBottom - (i / 4) * barDrawH;
+                        doc.line(chartLeft, gy, chartRight, gy);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(7);
+                        doc.setTextColor(...colors.gray);
+                        doc.text(String(Math.round((i / 4) * maxMonthly)), chartLeft - 6, gy + 3, { align: 'right' });
+                    }
+
+                    monthlyScores.forEach((m, i) => {
+                        const cx = chartLeft + (i + 0.5) * groupW;
+
+                        // Score bar
+                        const scoreH = (m.score / maxMonthly) * barDrawH;
+                        drawRoundedRect(cx - barW - 1, barChartBottom - scoreH, barW, scoreH, 2, colors.brand);
+
+                        // Tasks bar
+                        const taskH = (m.tasks / maxMonthly) * barDrawH;
+                        drawRoundedRect(cx + 1, barChartBottom - taskH, barW, taskH, 2, colors.green);
+
+                        // Value labels on top of bars
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(7);
+                        doc.setTextColor(...colors.brand);
+                        if (scoreH > 12) doc.text(String(m.score), cx - barW / 2 - 1, barChartBottom - scoreH - 4, { align: 'center' });
+                        doc.setTextColor(...colors.green);
+                        if (taskH > 12) doc.text(String(m.tasks), cx + barW / 2 + 1, barChartBottom - taskH - 4, { align: 'center' });
+
+                        // Month label
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(7);
+                        doc.setTextColor(...colors.gray);
+                        const mLbl = new Date(m.month + '-02T00:00:00Z').toLocaleString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+                        doc.text(mLbl, cx, barChartBottom + 14, { align: 'center' });
+                    });
+
+                    // Legend
+                    const legendY = barChartBottom + 28;
+                    doc.setFillColor(...colors.brand);
+                    doc.roundedRect(chartLeft, legendY, 10, 8, 2, 2, 'F');
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8);
+                    doc.setTextColor(...colors.grayDark);
+                    doc.text('Score', chartLeft + 14, legendY + 7);
+
+                    doc.setFillColor(...colors.green);
+                    doc.roundedRect(chartLeft + 60, legendY, 10, 8, 2, 2, 'F');
+                    doc.text('Tasks Completed', chartLeft + 74, legendY + 7);
+
+                    y = legendY + 24;
+                }
+
+                // ── Category Distribution (pie-like horizontal stacked bar) ──
+                if (Object.keys(categories).length > 0) {
+                    ensureSpace(80);
+                    y += 10;
+                    addText('Task Category Distribution — This Review', { size: 11, bold: true, color: colors.grayDark });
+                    y += 6;
+
+                    const totalCat = Object.values(categories).reduce((s, c) => s + c, 0);
+                    let barX = chartLeft;
+                    const catBarH = 24;
+                    const catEntries = Object.entries(categories);
+
+                    // Stacked bar
+                    catEntries.forEach(([, count], i) => {
+                        const segW = (count / totalCat) * drawW;
+                        doc.setFillColor(...chartColors[i % chartColors.length]);
+                        if (i === 0) {
+                            doc.roundedRect(barX, y, segW, catBarH, 4, 4, 'F');
+                        } else if (i === catEntries.length - 1) {
+                            doc.roundedRect(barX, y, segW, catBarH, 4, 4, 'F');
+                        } else {
+                            doc.rect(barX, y, segW, catBarH, 'F');
+                        }
+                        // Label inside bar if wide enough
+                        if (segW > 30) {
+                            doc.setFont('helvetica', 'bold');
+                            doc.setFontSize(8);
+                            doc.setTextColor(...colors.white);
+                            doc.text(String(count), barX + segW / 2, y + catBarH / 2 + 3, { align: 'center' });
+                        }
+                        barX += segW;
+                    });
+                    y += catBarH + 8;
+
+                    // Legend
+                    catEntries.forEach(([cat], i) => {
+                        const lx = chartLeft + (i % 3) * (drawW / 3);
+                        const ly = y + Math.floor(i / 3) * 16;
+                        doc.setFillColor(...chartColors[i % chartColors.length]);
+                        doc.roundedRect(lx, ly, 8, 8, 2, 2, 'F');
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(8);
+                        doc.setTextColor(...colors.grayDark);
+                        doc.text(cat, lx + 12, ly + 7);
+                    });
+                    y += Math.ceil(catEntries.length / 3) * 16 + 10;
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════
+            // DETAILED TEXT REPORT
+            // ═══════════════════════════════════════════════════════
+            doc.addPage();
+            y = margin;
+
+            drawRoundedRect(margin, y, contentWidth, 36, 4, colors.brandLight);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.setTextColor(...colors.brand);
+            doc.text('Detailed Review — ' + monthLabel, margin + 12, y + 24);
+            y += 52;
+
+            addText(`Employee: ${employee.name}  |  Department: ${employee.department}  |  Role: ${employee.role}`, { size: 9, color: colors.gray });
+            addText(`Reviewed: ${reviewedAt}  |  Total Score: ${review.score}  |  Generated: ${new Date().toLocaleString()}`, { size: 9, color: colors.gray });
+            y += 6;
 
             addSection('Manager Feedback');
-            addText(review.managerFeedback?.trim() || 'No feedback recorded.');
+            addText(review.managerFeedback?.trim() || 'No feedback recorded.', { size: 10, color: colors.grayDark });
 
-            // Task Scores & Feedback section
             addSection('Task Scores & Feedback');
             if (review.taskScores && Object.keys(review.taskScores).length > 0) {
                 Object.entries(review.taskScores).forEach(([taskId, score]) => {
                     const taskTitle = goalLookup[taskId] || `Goal ${taskId}`;
                     const feedback = review.taskFeedback?.[taskId] || '';
-                    addText(`• ${taskTitle}: ${score}/10`);
+                    ensureSpace(30);
+                    addText(`• ${taskTitle}: ${score}/10`, { size: 10, bold: true, color: scoreColor(score) });
                     if (feedback) {
-                        addText(`  Feedback: ${feedback}`);
+                        addText(`  ${feedback}`, { size: 9, color: colors.gray });
                     }
                 });
             } else {
-                // Fallback for legacy reviews
-                if (completedTasks.length === 0) {
-                    addText('No tasks were scored.');
-                } else {
-                    completedTasks.forEach(task => addText(`• ${task}`));
-                }
+                completedTasks.forEach(task => addText(`• ${task}`, { size: 10 }));
             }
 
-            addSection('Pending Tasks');
-            if (pendingTasks.length === 0) {
-                addText('No pending tasks were recorded.');
-            } else {
-                pendingTasks.forEach(task => addText(`• ${task}`));
+            if (pendingTasks.length > 0) {
+                addSection('Pending Tasks');
+                pendingTasks.forEach(task => addText(`• ${task}`, { size: 10, color: colors.gray }));
             }
 
-            addSection('Completed Tasks by Category');
-            if (Object.keys(categories).length === 0) {
-                addText('No category distribution recorded.');
-            } else {
-                Object.entries(categories).forEach(([category, count]) => addText(`• ${category}: ${count}`));
-            }
-
-            addSection('Role Goal Progress');
-            if (roleProgress.length === 0) {
-                addText('No role goal progress recorded.');
-            } else {
+            if (roleProgress.length > 0) {
+                addSection('Role Goal Progress');
                 roleProgress.forEach(item => {
                     const goalTitle = goalLookup[String(item.goalId)] || `Goal ${item.goalId}`;
-                    addText(`• ${goalTitle}: ${item.progress}%`);
+                    ensureSpace(24);
+                    addText(`${goalTitle}: ${item.progress}%`, { size: 10, color: colors.grayDark });
+                    // Mini progress bar
+                    const barY = y - 2;
+                    drawRoundedRect(margin, barY, contentWidth, 8, 3, colors.grayLight);
+                    const fillW = (item.progress / 100) * contentWidth;
+                    if (fillW > 0) {
+                        drawRoundedRect(margin, barY, Math.max(fillW, 6), 8, 3, item.progress >= 75 ? colors.green : item.progress >= 40 ? colors.yellow : colors.red);
+                    }
+                    y += 10;
                 });
             }
 
+            // ── Save & Email ──
             const fileName = `${employee.name.replace(/\s+/g, '_')}_Review_${review.month}.pdf`;
             const dataUri = doc.output('datauristring');
             const contentBase64 = dataUri.split(',')[1] ?? '';
