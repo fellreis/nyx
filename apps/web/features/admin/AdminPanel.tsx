@@ -49,7 +49,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onConductReview }) => {
 
         switch (currentUser.role) {
             case UserRole.ADMIN:
-                return e.role !== UserRole.ADMIN;
+                // Admins can see all users.
+                return true;
             case UserRole.MANAGER:
                 return String(e.managerId) === String(currentUser.id);
             default:
