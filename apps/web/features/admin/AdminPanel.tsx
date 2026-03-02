@@ -227,63 +227,67 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onConductReview }) => {
                 {manageableEmployees.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {manageableEmployees.map(member => (
-                            <Card key={member.id} className="p-6 flex flex-col">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 bg-nyx-100 dark:bg-nyx-500/20 rounded-full flex items-center justify-center text-nyx-600 dark:text-nyx-300 font-bold text-lg">
+                            <Card key={member.id} className="p-6 flex flex-col transition-all duration-200 hover:shadow-lg hover:border-nyx-500/30 dark:hover:border-nyx-500/30">
+                                <div className="flex items-center gap-4 mb-5">
+                                    <div className="w-12 h-12 bg-nyx-100 dark:bg-nyx-500/20 rounded-full flex items-center justify-center text-nyx-700 dark:text-nyx-300 font-bold text-lg flex-shrink-0">
                                         {member.name.split(' ').map(n => n[0]).join('')}
                                     </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{member.name}</h3>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">{member.department} / <span className="capitalize">{member.role}</span></p>
+                                    <div className="min-w-0">
+                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{member.name}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{member.department} / <span className="capitalize">{member.role}</span></p>
                                     </div>
                                 </div>
-                                
-                                <div className="space-y-2 mt-auto pt-4 border-t dark:border-gray-700">
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        className="w-full"
-                                        onClick={() => setEditingEmployee(member)}
-                                    >
-                                        <Edit className="w-4 h-4 mr-2" />
-                                        Edit Profile
-                                    </Button>
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        className="w-full"
-                                        onClick={() => setManagingGoalsFor(member)}
-                                    >
-                                        <ListChecks className="w-4 h-4 mr-2" />
-                                        Manage Goals
-                                    </Button>
-                                    <Button 
-                                        size="sm" 
-                                        variant="secondary" 
+
+                                <div className="space-y-2 mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                                    <Button
+                                        size="sm"
+                                        variant="primary"
                                         className="w-full"
                                         onClick={() => onConductReview?.(member)}
                                     >
                                         <FileText className="w-4 h-4 mr-2" />
                                         Conduct Review
                                     </Button>
-                                    <Button 
-                                        size="sm" 
-                                        variant="secondary" 
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
                                         className="w-full"
-                                        onClick={() => handleResetPassword(member)}
+                                        onClick={() => setManagingGoalsFor(member)}
                                     >
-                                        <KeyRound className="w-4 h-4 mr-2" />
-                                        Reset Password
+                                        <ListChecks className="w-4 h-4 mr-2" />
+                                        Manage Goals
                                     </Button>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="flex-1"
+                                            onClick={() => setEditingEmployee(member)}
+                                        >
+                                            <Edit className="w-3.5 h-3.5 mr-1.5" />
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="flex-1"
+                                            onClick={() => handleResetPassword(member)}
+                                        >
+                                            <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+                                            Password
+                                        </Button>
+                                    </div>
                                 </div>
                             </Card>
                         ))}
                     </div>
                 ) : (
                      <Card className="p-12 text-center border-dashed dark:border-gray-700 dark:bg-gray-800/50">
-                        <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">No Manageable Employees</h3>
-                        <p className="text-gray-600 dark:text-gray-400">There are no employees available for you to manage.</p>
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center">
+                            <Users className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">No Manageable Employees</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">There are no employees available for you to manage.</p>
                     </Card>
                 )}
             </div>

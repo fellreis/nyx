@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Target, CheckCircle, Clock, TrendingUp, Activity, CalendarDays, Download, LineChart, BarChart3, List, Focus, MessageSquare, Award, PieChart } from 'lucide-react';
+import { Target, CheckCircle, Clock, TrendingUp, Activity, CalendarDays, Download, LineChart, BarChart3, List, Focus, MessageSquare, Award, PieChart, FileText } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import GoalCard from './GoalCard';
 import Card from '../../components/ui/Card';
@@ -292,7 +292,14 @@ const ProgressReports: React.FC = () => {
 
     const renderReports = () => {
         if (!sortedReviews || sortedReviews.length === 0) {
-            return <div className="text-center py-12 text-gray-500 dark:text-gray-400"><p>No performance reports are available yet. Your first report will appear here after your manager completes it.</p></div>;
+            return (
+                <div className="text-center py-12">
+                    <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center">
+                        <MessageSquare className="w-7 h-7 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">No performance reports are available yet. Your first report will appear here after your manager completes it.</p>
+                </div>
+            );
         }
 
         return (
@@ -365,12 +372,18 @@ const ProgressReports: React.FC = () => {
                     </div>
                     
                     <div className="flex justify-between items-center mb-4 px-2">
-                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                            {activeTab === 'Reports' ? 'Performance Reports' : 'Progress History'}
+                        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+                            {activeTab === 'Reports' ? (
+                                <><FileText className="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400" /> Performance Reports</>
+                            ) : activeTab === 'Analytics' ? (
+                                <><LineChart className="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400" /> Analytics</>
+                            ) : (
+                                <><List className="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400" /> Detailed History</>
+                            )}
                         </h2>
                         <Button variant="outline" size="sm" onClick={handleExport}>
                             <Download className="w-4 h-4 mr-2" />
-                            Export Complete Data
+                            Export
                         </Button>
                     </div>
 
@@ -441,8 +454,11 @@ const MonthlyTasks: React.FC<{ goals: Goal[] }> = ({ goals }) => {
                         })}
                     </div>
                 ) : (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <p>No monthly tasks assigned for this period. Focus on your long-term role goals!</p>
+                    <div className="text-center py-8">
+                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center">
+                            <Focus className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No monthly tasks assigned for this period. Focus on your long-term role goals!</p>
                     </div>
                 )}
             </div>
@@ -510,14 +526,16 @@ const Dashboard: React.FC = () => {
         await updateGoal(goalId, updates);
     };
 
-    const StatCard = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) => (
-        <Card className="p-4 md:p-6">
+    const StatCard = ({ icon, label, value, color, bgColor }: { icon: React.ReactNode; label: string; value: string | number; color: string; bgColor: string }) => (
+        <Card className="p-4 md:p-6 transition-all duration-200 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">{label}</p>
                     <p className="text-2xl font-bold dark:text-white">{value}</p>
                 </div>
-                <div className={color}>{icon}</div>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${bgColor}`}>
+                    <div className={color}>{icon}</div>
+                </div>
             </div>
         </Card>
     );
@@ -530,11 +548,11 @@ const Dashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <StatCard icon={<Target size={24} />} label="Total Goals" value={stats.totalGoals} color="text-nyx-500" />
-                <StatCard icon={<CheckCircle size={24} />} label="Completed" value={stats.completedGoals} color="text-green-500" />
-                <StatCard icon={<Clock size={24} />} label="In Progress" value={stats.inProgressGoals} color="text-orange-500" />
-                <StatCard icon={<TrendingUp size={24} />} label="Total Points" value={stats.totalPoints} color="text-purple-500" />
-                <StatCard icon={<Activity size={24} />} label="Avg. Progress" value={`${stats.averageProgress}%`} color="text-indigo-500" />
+                <StatCard icon={<Target size={20} />} label="Total Goals" value={stats.totalGoals} color="text-nyx-600 dark:text-nyx-400" bgColor="bg-nyx-100 dark:bg-nyx-500/20" />
+                <StatCard icon={<CheckCircle size={20} />} label="Completed" value={stats.completedGoals} color="text-green-600 dark:text-green-400" bgColor="bg-green-100 dark:bg-green-500/20" />
+                <StatCard icon={<Clock size={20} />} label="In Progress" value={stats.inProgressGoals} color="text-orange-600 dark:text-orange-400" bgColor="bg-orange-100 dark:bg-orange-500/20" />
+                <StatCard icon={<TrendingUp size={20} />} label="Total Points" value={stats.totalPoints} color="text-purple-600 dark:text-purple-400" bgColor="bg-purple-100 dark:bg-purple-500/20" />
+                <StatCard icon={<Activity size={20} />} label="Avg. Progress" value={`${stats.averageProgress}%`} color="text-indigo-600 dark:text-indigo-400" bgColor="bg-indigo-100 dark:bg-indigo-500/20" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -542,7 +560,10 @@ const Dashboard: React.FC = () => {
                     <MonthlyTasks goals={monthlyTasks} />
 
                     <div>
-                        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Your Role Goals</h2>
+                        <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                            <Award className="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400" />
+                            Your Role Goals
+                        </h2>
                         {roleGoals.length > 0 ? (
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                 {roleGoals.map(goal => (
@@ -550,10 +571,12 @@ const Dashboard: React.FC = () => {
                                 ))}
                             </div>
                         ) : (
-                            <Card className="p-12 text-center border-dashed dark:bg-gray-800/50 dark:border-gray-700">
-                                <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">No Role Goals Yet</h3>
-                                <p className="text-gray-600 dark:text-gray-400">These are long-term goals for your career path. Contact your manager to define them.</p>
+                            <Card className="p-10 text-center border-dashed dark:bg-gray-800/50 dark:border-gray-700">
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700/60 flex items-center justify-center">
+                                    <Target className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">No Role Goals Yet</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">These are long-term goals for your career path. Contact your manager to define them.</p>
                             </Card>
                         )}
                     </div>
@@ -607,8 +630,11 @@ const Dashboard: React.FC = () => {
                                     })}
                                 </div>
                             ) : (
-                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                    <p>No upcoming deadlines. Great job!</p>
+                                <div className="text-center py-8">
+                                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
+                                        <CheckCircle className="w-6 h-6 text-green-500 dark:text-green-400" />
+                                    </div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">No upcoming deadlines. Great job!</p>
                                 </div>
                             )}
                         </div>

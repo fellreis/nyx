@@ -645,10 +645,10 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             <header className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200/80 dark:border-gray-700">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
-                        <p className="text-sm font-semibold text-nyx-600 dark:text-nyx-400">PERFORMANCE REVIEW</p>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">Conducting Review for {employee.name}</h1>
-                        <p className="text-lg text-gray-500 dark:text-gray-400">{monthName}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{employee.department} · <span className="capitalize">{employee.role}</span></p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-nyx-600 dark:text-nyx-400">Performance Review</p>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">Reviewing {employee.name}</h1>
+                        <p className="text-base text-gray-500 dark:text-gray-400 mt-0.5">{monthName}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{employee.department} · <span className="capitalize">{employee.role}</span></p>
                     </div>
                     <div className="flex items-center gap-4">
                         {monthlyTasks.length > 0 && (
@@ -664,8 +664,8 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
 
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
-                        <Star className="w-6 h-6 mr-3 text-gray-400 dark:text-gray-500" />
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
+                        <Star className="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400" />
                         Monthly Tasks — Rate &amp; Review
                     </h2>
                     <Card>
@@ -719,8 +719,11 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="text-center py-8">
-                                        <p className="text-gray-500 dark:text-gray-400 mb-2">No monthly tasks assigned for this period.</p>
+                                    <div className="text-center py-10">
+                                        <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
+                                            <Star className="w-7 h-7 text-amber-500 dark:text-amber-400" />
+                                        </div>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">No monthly tasks assigned for this period.</p>
                                         <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">Assign tasks via Manage Goals first before conducting a review.</p>
                                     </div>
                                 )}
@@ -730,8 +733,8 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                 </div>
 
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
-                        <Sliders className="w-6 h-6 mr-3 text-gray-400 dark:text-gray-500" />
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
+                        <Sliders className="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400" />
                         Role Goal Progress Update
                     </h2>
                     <Card>
@@ -763,8 +766,8 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                 </div>
 
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
-                        <MessageSquare className="w-6 h-6 mr-3 text-gray-400 dark:text-gray-500" />
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
+                        <MessageSquare className="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400" />
                         Manager's Overall Feedback
                     </h2>
                     <Card>
@@ -781,7 +784,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                 </div>
 
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700">
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700">
                         Previous Reviews
                     </h2>
                     <Card>
