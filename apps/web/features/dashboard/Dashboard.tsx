@@ -302,46 +302,82 @@ const ProgressReports: React.FC = () => {
             );
         }
 
+        const catColors: Record<string, string> = {
+            'Creative Strategy': '#f472b6', 'Strategic Research': '#fbbf24', 'Concept Development': '#34d399',
+            'Project Management': '#60a5fa', 'Team Leadership': '#a78bfa', 'Creative Excellence': '#f97316',
+            '90-Day Plan': '#06b6d4', 'General': '#ec4899',
+        };
+        const fallbackCols = ['#f472b6','#fbbf24','#34d399','#60a5fa','#a78bfa','#f97316','#06b6d4','#ec4899'];
+
         return (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="space-y-4">
                 {sortedReviews.map(review => {
                     const dateObj = new Date(review.month + '-02T00:00:00Z');
                     const monthLong = dateObj.toLocaleString('default', { month: 'long', timeZone: 'UTC' });
                     const year = dateObj.getFullYear();
+                    const catDist = review.monthlyTaskCategoryDistribution || {};
+                    const catTotal = Object.values(catDist).reduce((s: number, v: number) => s + v, 0);
+                    const catEntries = Object.entries(catDist).sort((a, b) => b[1] - a[1]);
 
                     return (
-                        <Card key={review.month} className="p-6 flex flex-col h-full transition-all hover:shadow-md hover:border-nyx-300 dark:hover:border-nyx-500">
-                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                                Performance Report - {monthLong} {year}
-                            </h3>
-                            
-                            <div className="mt-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                                <p>{review.completedTaskIds.length} task{review.completedTaskIds.length !== 1 ? 's' : ''} completed.</p>
-                                <p className="truncate" title={review.managerFeedback}>
-                                    M: {review.managerFeedback.substring(0, 50)}{review.managerFeedback.length > 50 ? '...' : ''}
-                                </p>
-                            </div>
-                            
-                            <div className="flex-grow" />
-                            
-                            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <div className="flex flex-wrap gap-3 items-end justify-between">
-                                    <div className="min-w-[140px] flex-1">
-                                        {review.monthlyTaskCategoryDistribution &&
-                                        Object.keys(review.monthlyTaskCategoryDistribution).length > 0 ? (
-                                            <MonthlyFocusDisplay data={review.monthlyTaskCategoryDistribution} />
-                                        ) : (
-                                            <div />
-                                        )}
+                        <Card key={review.month} className="p-0 overflow-hidden transition-all hover:shadow-md hover:border-nyx-300 dark:hover:border-nyx-500 cursor-pointer"
+                              onClick={() => setViewingReport(review)}>
+                            <div className="flex items-stretch">
+                                {/* Score highlight block */}
+                                <div className="bg-gradient-to-b from-pink-500 to-rose-500 w-20 flex-shrink-0 flex flex-col items-center justify-center py-4 px-2">
+                                    <span className="text-3xl font-black text-white">{review.score}</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 mt-0.5">PTS</span>
+                                </div>
+                                {/* Content */}
+                                <div className="flex-1 p-4 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <h3 className="text-base font-bold text-gray-800 dark:text-gray-100 leading-tight">
+                                                {monthLong} {year}
+                                            </h3>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                {review.completedTaskIds.length} task{review.completedTaskIds.length !== 1 ? 's' : ''} completed
+                                            </p>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="flex-shrink-0 text-xs"
+                                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setViewingReport(review); }}
+                                        >
+                                            View
+                                        </Button>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="w-full sm:w-auto flex-shrink-0"
-                                        onClick={() => setViewingReport(review)}
-                                    >
-                                        View Full Report
-                                    </Button>
+
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 truncate" title={review.managerFeedback}>
+                                        {review.managerFeedback.substring(0, 80)}{review.managerFeedback.length > 80 ? '…' : ''}
+                                    </p>
+
+                                    {/* Mini stacked category bar */}
+                                    {catTotal > 0 && (
+                                        <div className="mt-3">
+                                            <div className="flex rounded overflow-hidden h-2.5">
+                                                {catEntries.map(([cat, count], i) => (
+                                                    <div
+                                                        key={cat}
+                                                        style={{
+                                                            width: `${(count / catTotal) * 100}%`,
+                                                            backgroundColor: catColors[cat] || fallbackCols[i % fallbackCols.length],
+                                                        }}
+                                                        title={`${cat}: ${count}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <div className="flex flex-wrap gap-x-3 gap-y-0 mt-1.5">
+                                                {catEntries.map(([cat, count], i) => (
+                                                    <span key={cat} className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+                                                        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: catColors[cat] || fallbackCols[i % fallbackCols.length] }} />
+                                                        {cat}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </Card>
