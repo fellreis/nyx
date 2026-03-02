@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
-import { CheckSquare, Circle, Sliders, MessageSquare } from 'lucide-react';
+import { Star, Sliders, MessageSquare } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -18,11 +18,33 @@ const formatMonthLabel = (month: string) => {
     return new Date(month + '-02T00:00:00Z').toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 };
 
+const RatingSelector: React.FC<{ value: number; onChange: (v: number) => void; }> = ({ value, onChange }) => {
+    return (
+        <div className="flex items-center gap-1.5">
+            {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                <button
+                    key={n}
+                    type="button"
+                    onClick={() => onChange(value === n ? 0 : n)}
+                    className={`w-8 h-8 rounded-full text-xs font-bold transition-all duration-150 border ${
+                        n <= value
+                            ? 'bg-nyx-600 text-white border-nyx-700 dark:bg-nyx-500 dark:border-nyx-400'
+                            : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600 dark:hover:bg-gray-600'
+                    }`}
+                    title={`${n}/10`}
+                >
+                    {n}
+                </button>
+            ))}
+        </div>
+    );
+};
+
 const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack }) => {
     const { updateGoal, updateEmployee, createReview, refreshEmployees, refreshNotifications, currentUser, employees } = useApp();
-    
+
     const currentMonth = new Date().toISOString().slice(0, 7);
-    
+
     const { monthlyTasks, roleGoals, categorizedTasks } = useMemo(() => {
         const tasks = employee.goals.filter((g) => {
             if (g.type !== GoalType.MONTHLY_TASK) return false;
@@ -46,12 +68,14 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
         };
     }, [employee, currentMonth]);
 
-    const [completedTaskIds, setCompletedTaskIds] = useState<Array<number | string>>([]);
+    const [taskScores, setTaskScores] = useState<Record<string, number>>({});
+    const [taskFeedback, setTaskFeedback] = useState<Record<string, string>>({});
     const [roleGoalProgress, setRoleGoalProgress] = useState<Record<string, number>>({});
-     const [managerFeedback, setManagerFeedback] = useState('');
+    const [managerFeedback, setManagerFeedback] = useState('');
 
     useEffect(() => {
-        setCompletedTaskIds([]);
+        setTaskScores({});
+        setTaskFeedback({});
         setManagerFeedback('');
         setRoleGoalProgress(
             roleGoals.reduce((acc, goal) => {
@@ -61,11 +85,12 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
         );
     }, [roleGoals]);
 
-    const handleTaskToggle = (taskId: number | string) => {
-        const taskKey = String(taskId);
-        setCompletedTaskIds(prev =>
-            prev.some(id => String(id) === taskKey) ? prev.filter(id => String(id) !== taskKey) : [...prev, taskId]
-        );
+    const handleScoreChange = (taskId: number | string, score: number) => {
+        setTaskScores(prev => ({ ...prev, [String(taskId)]: score }));
+    };
+
+    const handleTaskFeedbackChange = (taskId: number | string, feedback: string) => {
+        setTaskFeedback(prev => ({ ...prev, [String(taskId)]: feedback }));
     };
 
     const handleProgressChange = (goalId: number | string, progress: number) => {
@@ -73,6 +98,14 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
     };
 
     const handleFinalizeClick = async () => {
+        const completedTaskIds = monthlyTasks
+            .filter(task => (taskScores[String(task.id)] || 0) > 0)
+            .map(task => task.id);
+
+        const pendingTaskIds = monthlyTasks
+            .filter(task => !completedTaskIds.some(id => String(id) === String(task.id)))
+            .map(task => task.id);
+
         const monthlyTaskCategoryDistribution = monthlyTasks
             .filter(task => completedTaskIds.some(id => String(id) === String(task.id)))
             .reduce((acc, task) => {
@@ -81,16 +114,14 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                 return acc;
             }, {} as Record<string, number>);
 
-        const pendingTaskIds = monthlyTasks
-            .filter(task => !completedTaskIds.some(id => String(id) === String(task.id)))
-            .map(task => task.id);
-
-        const score = monthlyTasks
-            .filter(task => completedTaskIds.some(id => String(id) === String(task.id)))
-            .reduce((sum, task) => sum + task.points, 0);
+        // Score = sum of all individual task ratings (each 0-10)
+        const score = Object.values(taskScores).reduce((sum, rating) => sum + rating, 0);
 
         for (const taskId of completedTaskIds) {
-            await updateGoal(taskId, { status: GoalStatus.COMPLETED, progress: 100 });
+            const taskRating = taskScores[String(taskId)] || 0;
+            const progress = Math.round((taskRating / 10) * 100);
+            const status = taskRating >= 7 ? GoalStatus.COMPLETED : taskRating > 0 ? GoalStatus.IN_PROGRESS : GoalStatus.NOT_STARTED;
+            await updateGoal(taskId, { status, progress });
         }
 
         for (const goal of roleGoals) {
@@ -109,15 +140,17 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             completedTaskIds,
             pendingTaskIds,
             roleGoalProgress: Object.entries(roleGoalProgress).map(([goalId, progress]) => ({ goalId, progress })),
-            monthlyTaskCategoryDistribution
+            monthlyTaskCategoryDistribution,
+            taskScores,
+            taskFeedback
         };
 
         const lastHistory = [...employee.progressHistory].sort((a,b) => a.date.localeCompare(b.date)).pop() || { score: 0, tasksCompleted: 0 };
         const newCumulativeScore = lastHistory.score + score;
         const newTotalTasksCompleted = lastHistory.tasksCompleted + completedTaskIds.length;
-        
+
         const newHistoryEntry: ProgressHistory = { date: currentMonth, score: newCumulativeScore, tasksCompleted: newTotalTasksCompleted };
-        
+
         const updatedProgressHistory = employee.progressHistory.filter(h => h.date !== currentMonth);
         updatedProgressHistory.push(newHistoryEntry);
 
@@ -131,7 +164,9 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             completedTaskIds,
             pendingTaskIds,
             roleGoalProgress: Object.entries(roleGoalProgress).map(([goalId, progress]) => ({ goalId, progress })),
-            monthlyTaskCategoryDistribution
+            monthlyTaskCategoryDistribution,
+            taskScores,
+            taskFeedback
         });
 
         await refreshEmployees();
@@ -139,7 +174,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
         await handleDownloadReview(newReview);
         onBack();
     };
-    
+
     const sortedReviews = useMemo(() => {
         return [...(employee.reviews || [])].sort((a, b) => {
             const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
@@ -162,6 +197,8 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
     }, [sortedReviews]);
 
     const monthName = new Date(currentMonth + '-02').toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const totalScore = Object.values(taskScores).reduce((sum, r) => sum + r, 0);
+    const maxPossible = monthlyTasks.length * 10;
 
     const handleDownloadReview = async (review: Review) => {
         try {
@@ -211,19 +248,32 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             addText(`Role: ${employee.role}`);
         addText(`Review Month: ${monthLabel}`);
         addText(`Reviewed At: ${reviewedAt}`);
-            addText(`Score: ${review.score}`);
-            addText(`Tasks Completed: ${review.completedTaskIds.length}`);
+            addText(`Total Score: ${review.score}`);
+            addText(`Tasks Scored: ${review.completedTaskIds.length}`);
             addText(`Tasks Pending: ${pendingTasks.length}`);
             addText(`Generated: ${new Date().toLocaleString()}`);
 
             addSection('Manager Feedback');
             addText(review.managerFeedback?.trim() || 'No feedback recorded.');
 
-            addSection('Completed Tasks');
-            if (completedTasks.length === 0) {
-                addText('No completed tasks were recorded.');
+            // Task Scores & Feedback section
+            addSection('Task Scores & Feedback');
+            if (review.taskScores && Object.keys(review.taskScores).length > 0) {
+                Object.entries(review.taskScores).forEach(([taskId, score]) => {
+                    const taskTitle = goalLookup[taskId] || `Goal ${taskId}`;
+                    const feedback = review.taskFeedback?.[taskId] || '';
+                    addText(`• ${taskTitle}: ${score}/10`);
+                    if (feedback) {
+                        addText(`  Feedback: ${feedback}`);
+                    }
+                });
             } else {
-                completedTasks.forEach(task => addText(`• ${task}`));
+                // Fallback for legacy reviews
+                if (completedTasks.length === 0) {
+                    addText('No tasks were scored.');
+                } else {
+                    completedTasks.forEach(task => addText(`• ${task}`));
+                }
             }
 
             addSection('Pending Tasks');
@@ -292,39 +342,71 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                         <p className="text-lg text-gray-500 dark:text-gray-400">{monthName}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{employee.department} · <span className="capitalize">{employee.role}</span></p>
                     </div>
-                    <Button variant="outline" onClick={onBack}>Back to Admin</Button>
+                    <div className="flex items-center gap-4">
+                        {monthlyTasks.length > 0 && (
+                            <div className="inline-flex items-center gap-2 bg-nyx-50 dark:bg-nyx-500/10 border border-nyx-200 dark:border-nyx-500/30 rounded-lg px-4 py-2">
+                                <Star className="w-5 h-5 text-nyx-600 dark:text-nyx-400" />
+                                <span className="text-lg font-bold text-nyx-700 dark:text-nyx-300">{totalScore}/{maxPossible}</span>
+                            </div>
+                        )}
+                        <Button variant="outline" onClick={onBack}>Back to Admin</Button>
+                    </div>
                 </div>
             </header>
 
             <div className="space-y-6">
                 <div>
                     <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
-                        <CheckSquare className="w-6 h-6 mr-3 text-gray-400 dark:text-gray-500" />
-                        Monthly Tasks Checklist
+                        <Star className="w-6 h-6 mr-3 text-gray-400 dark:text-gray-500" />
+                        Monthly Tasks — Rate &amp; Review
                     </h2>
                     <Card>
                         <div className="p-5">
-                            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                            <div className="space-y-4 max-h-[32rem] overflow-y-auto pr-2">
                                 {monthlyTasks.length > 0 ? (
                                     Object.entries(categorizedTasks).map(([category, tasks]) => (
                                         <div key={category}>
                                              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-2 border-b dark:border-gray-700 pb-2">
                                                 {category}
                                             </h3>
-                                            <div className="space-y-1 pt-1">
-                                                {tasks.map(task => (
-                                                     <div key={task.id} onClick={() => handleTaskToggle(task.id)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
-                                                        {completedTaskIds.some(id => String(id) === String(task.id)) ? 
-                                                            <CheckSquare className="w-5 h-5 text-nyx-600 dark:text-nyx-400 flex-shrink-0" /> : 
-                                                            <Circle className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                                                        }
-                                                        <div className="flex-1">
-                                                            <p className="font-medium text-gray-800 dark:text-gray-200">{task.title}</p>
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400">{task.description}</p>
+                                            <div className="space-y-4 pt-1">
+                                                {tasks.map(task => {
+                                                    const currentScore = taskScores[String(task.id)] || 0;
+                                                    return (
+                                                        <div key={task.id} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <div className="flex-1">
+                                                                    <p className="font-medium text-gray-800 dark:text-gray-200">{task.title}</p>
+                                                                    <p className="text-sm text-gray-500 dark:text-gray-400">{task.description}</p>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 ml-4">
+                                                                    <Badge variant="purple">{task.points} pts</Badge>
+                                                                    {currentScore > 0 && (
+                                                                        <Badge variant={currentScore >= 7 ? 'success' : currentScore >= 4 ? 'warning' : 'danger'}>
+                                                                            {currentScore}/10
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="mb-3">
+                                                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Score (1-10)</label>
+                                                                <RatingSelector
+                                                                    value={currentScore}
+                                                                    onChange={(v) => handleScoreChange(task.id, v)}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Task Feedback</label>
+                                                                <textarea
+                                                                    value={taskFeedback[String(task.id)] || ''}
+                                                                    onChange={(e) => handleTaskFeedbackChange(task.id, e.target.value)}
+                                                                    placeholder="Provide specific feedback for this task..."
+                                                                    className="w-full h-20 p-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nyx-500 bg-white text-gray-900 dark:bg-gray-900 dark:border-gray-600 dark:text-white resize-none"
+                                                                />
+                                                            </div>
                                                         </div>
-                                                        <Badge variant="purple">{task.points} pts</Badge>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     ))
@@ -335,7 +417,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                         </div>
                     </Card>
                 </div>
-                
+
                 <div>
                     <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
                         <Sliders className="w-6 h-6 mr-3 text-gray-400 dark:text-gray-500" />
@@ -372,7 +454,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                 <div>
                     <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-3 pb-3 border-b dark:border-gray-700 flex items-center">
                         <MessageSquare className="w-6 h-6 mr-3 text-gray-400 dark:text-gray-500" />
-                        Manager's Feedback
+                        Manager's Overall Feedback
                     </h2>
                     <Card>
                          <div className="p-5">
@@ -422,8 +504,8 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                                                 </Button>
                                             </div>
                                             <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                                <span><strong className="text-gray-800 dark:text-gray-200">Score:</strong> {selectedReview.score}</span>
-                                                <span><strong className="text-gray-800 dark:text-gray-200">Tasks Completed:</strong> {selectedReview.completedTaskIds.length}</span>
+                                                <span><strong className="text-gray-800 dark:text-gray-200">Total Score:</strong> {selectedReview.score}</span>
+                                                <span><strong className="text-gray-800 dark:text-gray-200">Tasks Scored:</strong> {selectedReview.completedTaskIds.length}</span>
                                                 <span><strong className="text-gray-800 dark:text-gray-200">Tasks Pending:</strong> {selectedReview.pendingTaskIds?.length || 0}</span>
                                                 <span><strong className="text-gray-800 dark:text-gray-200">Reviewed At:</strong> {selectedReview.createdAt ? new Date(selectedReview.createdAt).toLocaleDateString() : 'Not available'}</span>
                                             </div>
@@ -431,6 +513,25 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                                                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Manager Feedback</p>
                                                 <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{selectedReview.managerFeedback || 'No feedback recorded.'}</p>
                                             </div>
+                                            {/* Task Scores & Feedback for new reviews */}
+                                            {selectedReview.taskScores && Object.keys(selectedReview.taskScores).length > 0 && (
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Task Scores & Feedback</p>
+                                                    <div className="space-y-2">
+                                                        {Object.entries(selectedReview.taskScores).map(([taskId, score]) => (
+                                                            <div key={taskId} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{goalLookup[taskId] || `Goal ${taskId}`}</span>
+                                                                    <Badge variant={score >= 7 ? 'success' : score >= 4 ? 'warning' : 'danger'}>{score}/10</Badge>
+                                                                </div>
+                                                                {selectedReview.taskFeedback?.[taskId] && (
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{selectedReview.taskFeedback[taskId]}</p>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                             {selectedReview.monthlyTaskCategoryDistribution && (
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Completed Tasks by Category</p>

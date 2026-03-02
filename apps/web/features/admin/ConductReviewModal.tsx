@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { CheckSquare, Circle, Sliders, MessageSquare } from 'lucide-react';
+import { Star, Sliders, MessageSquare } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -14,10 +14,33 @@ interface ConductReviewModalProps {
     employee: UserType | null;
 }
 
+const RatingSelector: React.FC<{ value: number; onChange: (v: number) => void; }> = ({ value, onChange }) => {
+    return (
+        <div className="flex items-center gap-1">
+            {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                <button
+                    key={n}
+                    type="button"
+                    onClick={() => onChange(value === n ? 0 : n)}
+                    className={`w-7 h-7 rounded-full text-xs font-bold transition-all duration-150 border ${
+                        n <= value
+                            ? 'bg-nyx-600 text-white border-nyx-700 dark:bg-nyx-500 dark:border-nyx-400'
+                            : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600 dark:hover:bg-gray-600'
+                    }`}
+                    title={`${n}/10`}
+                >
+                    {n}
+                </button>
+            ))}
+        </div>
+    );
+};
+
 const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose, employee }) => {
     const { createReview, updateGoal, updateEmployee, refreshEmployees, refreshNotifications } = useApp();
-    
-    const [completedTaskIds, setCompletedTaskIds] = useState<Array<number | string>>([]);
+
+    const [taskScores, setTaskScores] = useState<Record<string, number>>({});
+    const [taskFeedback, setTaskFeedback] = useState<Record<string, string>>({});
     const [roleGoalProgress, setRoleGoalProgress] = useState<Record<string, number>>({});
     const [managerFeedback, setManagerFeedback] = useState('');
 
@@ -44,8 +67,8 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
 
     useEffect(() => {
         if (employee) {
-            // Reset state when a new employee is selected for review
-            setCompletedTaskIds([]);
+            setTaskScores({});
+            setTaskFeedback({});
             setManagerFeedback('');
             const initialProgress = employee.goals
                 .filter(g => g.type === GoalType.ROLE)
@@ -61,11 +84,12 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
         return null;
     }
 
-    const handleTaskToggle = (taskId: number | string) => {
-        const taskKey = String(taskId);
-        setCompletedTaskIds(prev =>
-            prev.some(id => String(id) === taskKey) ? prev.filter(id => String(id) !== taskKey) : [...prev, taskId]
-        );
+    const handleScoreChange = (taskId: number | string, score: number) => {
+        setTaskScores(prev => ({ ...prev, [String(taskId)]: score }));
+    };
+
+    const handleTaskFeedbackChange = (taskId: number | string, feedback: string) => {
+        setTaskFeedback(prev => ({ ...prev, [String(taskId)]: feedback }));
     };
 
     const handleProgressChange = (goalId: number | string, progress: number) => {
@@ -73,6 +97,14 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
     };
 
     const handleFinalizeClick = async () => {
+        const completedTaskIds = monthlyTasks
+            .filter(task => (taskScores[String(task.id)] || 0) > 0)
+            .map(task => task.id);
+
+        const pendingTaskIds = monthlyTasks
+            .filter(task => !completedTaskIds.some(id => String(id) === String(task.id)))
+            .map(task => task.id);
+
         const monthlyTaskCategoryDistribution = monthlyTasks
             .filter(task => completedTaskIds.some(id => String(id) === String(task.id)))
             .reduce((acc, task) => {
@@ -81,12 +113,14 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
                 return acc;
             }, {} as Record<string, number>);
 
-        const score = monthlyTasks
-            .filter(task => completedTaskIds.some(id => String(id) === String(task.id)))
-            .reduce((sum, task) => sum + task.points, 0);
+        // Score = sum of all individual task ratings (each 0-10)
+        const score = Object.values(taskScores).reduce((sum, rating) => sum + rating, 0);
 
         for (const taskId of completedTaskIds) {
-            await updateGoal(taskId, { status: GoalStatus.COMPLETED, progress: 100 });
+            const taskRating = taskScores[String(taskId)] || 0;
+            const progress = Math.round((taskRating / 10) * 100);
+            const status = taskRating >= 7 ? GoalStatus.COMPLETED : taskRating > 0 ? GoalStatus.IN_PROGRESS : GoalStatus.NOT_STARTED;
+            await updateGoal(taskId, { status, progress });
         }
 
         for (const goal of roleGoals) {
@@ -102,16 +136,19 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
             score,
             managerFeedback,
             completedTaskIds,
+            pendingTaskIds,
             roleGoalProgress: Object.entries(roleGoalProgress).map(([goalId, progress]) => ({ goalId, progress })),
-            monthlyTaskCategoryDistribution
+            monthlyTaskCategoryDistribution,
+            taskScores,
+            taskFeedback
         };
 
         const lastHistory = [...employee.progressHistory].sort((a,b) => a.date.localeCompare(b.date)).pop() || { score: 0, tasksCompleted: 0 };
         const newCumulativeScore = lastHistory.score + score;
         const newTotalTasksCompleted = lastHistory.tasksCompleted + completedTaskIds.length;
-        
+
         const newHistoryEntry: ProgressHistory = { date: currentMonth, score: newCumulativeScore, tasksCompleted: newTotalTasksCompleted };
-        
+
         const updatedProgressHistory = employee.progressHistory.filter(h => h.date !== currentMonth);
         updatedProgressHistory.push(newHistoryEntry);
 
@@ -124,7 +161,9 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
             managerFeedback,
             completedTaskIds,
             roleGoalProgress: Object.entries(roleGoalProgress).map(([goalId, progress]) => ({ goalId, progress })),
-            monthlyTaskCategoryDistribution
+            monthlyTaskCategoryDistribution,
+            taskScores,
+            taskFeedback
         });
 
         await refreshEmployees();
@@ -132,8 +171,10 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
 
         onClose();
     };
-    
+
     const monthName = new Date(currentMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    const totalScore = Object.values(taskScores).reduce((sum, r) => sum + r, 0);
+    const maxPossible = monthlyTasks.length * 10;
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Conducting Review for ${employee.name}`}>
@@ -141,32 +182,58 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
                 <header className="text-center">
                     <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">Performance Review</p>
                     <p className="text-gray-500 dark:text-gray-400">{monthName}</p>
+                    {monthlyTasks.length > 0 && (
+                        <div className="mt-2 inline-flex items-center gap-2 bg-nyx-50 dark:bg-nyx-500/10 border border-nyx-200 dark:border-nyx-500/30 rounded-lg px-4 py-2">
+                            <Star className="w-4 h-4 text-nyx-600 dark:text-nyx-400" />
+                            <span className="text-sm font-semibold text-nyx-700 dark:text-nyx-300">Running Score: {totalScore}/{maxPossible}</span>
+                        </div>
+                    )}
                 </header>
                 <div>
                     <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2 flex items-center">
-                        <CheckSquare className="w-5 h-5 mr-3 text-gray-400 dark:text-gray-500" />
-                        Monthly Tasks Checklist
+                        <Star className="w-5 h-5 mr-3 text-gray-400 dark:text-gray-500" />
+                        Monthly Tasks — Rate &amp; Review
                     </h2>
                     <Card>
                         <div className="p-4">
-                            <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                            <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
                                 {monthlyTasks.length > 0 ? (
                                     Object.entries(categorizedTasks).map(([category, tasks]) => (
                                         <div key={category}>
                                                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 border-b dark:border-gray-700 pb-1">
                                                 {category}
                                             </h3>
-                                            <div className="space-y-1">
-                                                {tasks.map(task => (
-                                                    <div key={task.id} onClick={() => handleTaskToggle(task.id)} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
-                                                        {completedTaskIds.some(id => String(id) === String(task.id)) ? 
-                                                            <CheckSquare className="w-5 h-5 text-nyx-600 dark:text-nyx-400 flex-shrink-0" /> : 
-                                                            <Circle className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                                                        }
-                                                        <p className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200">{task.title}</p>
-                                                        <Badge variant="purple">{task.points} pts</Badge>
-                                                    </div>
-                                                ))}
+                                            <div className="space-y-4">
+                                                {tasks.map(task => {
+                                                    const currentScore = taskScores[String(task.id)] || 0;
+                                                    return (
+                                                        <div key={task.id} className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <p className="font-medium text-gray-800 dark:text-gray-200">{task.title}</p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Badge variant="purple">{task.points} pts</Badge>
+                                                                    {currentScore > 0 && (
+                                                                        <Badge variant={currentScore >= 7 ? 'success' : currentScore >= 4 ? 'warning' : 'danger'}>
+                                                                            {currentScore}/10
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="mb-2">
+                                                                <RatingSelector
+                                                                    value={currentScore}
+                                                                    onChange={(v) => handleScoreChange(task.id, v)}
+                                                                />
+                                                            </div>
+                                                            <textarea
+                                                                value={taskFeedback[String(task.id)] || ''}
+                                                                onChange={(e) => handleTaskFeedbackChange(task.id, e.target.value)}
+                                                                placeholder="Provide feedback for this task..."
+                                                                className="w-full h-16 p-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nyx-500 bg-white text-gray-900 dark:bg-gray-900 dark:border-gray-600 dark:text-white resize-none"
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     ))
@@ -177,7 +244,7 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
                         </div>
                     </Card>
                 </div>
-                
+
                 <div>
                     <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2 flex items-center">
                         <Sliders className="w-5 h-5 mr-3 text-gray-400 dark:text-gray-500" />
@@ -214,7 +281,7 @@ const ConductReviewModal: React.FC<ConductReviewModalProps> = ({ isOpen, onClose
                 <div>
                     <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2 flex items-center">
                         <MessageSquare className="w-5 h-5 mr-3 text-gray-400 dark:text-gray-500" />
-                        Manager's Feedback
+                        Manager's Overall Feedback
                     </h2>
                     <Card>
                             <div className="p-4">

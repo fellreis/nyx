@@ -27,6 +27,8 @@ export interface Review {
     pendingTaskIds: Array<number | string>;
     roleGoalProgress: { goalId: number | string; progress: number; }[];
     monthlyTaskCategoryDistribution?: Record<string, number>;
+    taskScores?: Record<string, number>; // taskId -> 0-10 rating score
+    taskFeedback?: Record<string, string>; // taskId -> per-task feedback text
 }
 
 export interface ProgressHistory {
