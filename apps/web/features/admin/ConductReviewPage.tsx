@@ -207,6 +207,9 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             const pW = doc.internal.pageSize.getWidth();
             let y = 0;
 
+            // ── NYX logo as base64 PNG (white on transparent) ──
+            const NYX_LOGO_B64 = 'data:image/png;base64,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';
+
             // ── Bold color palette (Strava / dashboard inspired) ──
             type C3 = [number, number, number];
             const c = {
@@ -216,6 +219,7 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                 hotPink: [255, 46, 99] as C3,
                 electricYellow: [240, 230, 40] as C3,
                 mintGreen: [0, 210, 140] as C3,
+                nyxGreen: [0, 254, 138] as C3,
                 deepOrange: [255, 95, 31] as C3,
                 skyBlue: [58, 175, 255] as C3,
                 coral: [255, 127, 80] as C3,
@@ -257,90 +261,132 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             const scorePct = tasksTotal > 0 ? Math.round((review.score / (tasksTotal * 10)) * 100) : 0;
 
             // ═══════════════════════════════════════════════════════
-            // PAGE 1: BOLD COVER — BIG COLOR BLOCKS + GIANT NUMBERS
+            // PAGE 1: BOLD COVER — PILLAR CHART + COLOR BLOCKS
             // ═══════════════════════════════════════════════════════
 
             // Full-page black background
             fill(0, 0, pW, pH, c.black);
 
-            // Top bar — brand stripe with logo text
-            fill(0, 0, pW, 56, c.purple);
-            txt('NYX', 32, 38, 22, c.white, true);
-            txt('#PERFORMANCE', pW - 32, 38, 14, c.white, true, 'right');
+            // Top bar — logo image + brand tag
+            fill(0, 0, pW, 56, [10, 10, 10] as C3);
+            try { doc.addImage(NYX_LOGO_B64, 'PNG', 24, 12, 80, 32); } catch { txt('NYX', 32, 38, 22, c.white, true); }
+            txt('#PERFORMANCE', pW - 32, 38, 14, c.nyxGreen, true, 'right');
+            y = 64;
+
+            // ── PROGRESS OVER MONTHS — Tall pillar / column chart ──
+            // Gather monthly score data for the pillar chart
+            const pillarData = uniqueMonthReviews.map(r => {
+                const ts = r.taskScores ? Object.values(r.taskScores) : [];
+                const avg = ts.length > 0 ? ts.reduce((a, b) => a + b, 0) / ts.length : r.score / Math.max(r.completedTaskIds.length, 1);
+                return { month: r.month, avg: Math.min(avg, 10), score: r.score };
+            });
+
+            if (pillarData.length > 0) {
+                const pillarSection = 260;
+                const pillarTop = y + 8;
+                const pillarBottom = y + pillarSection - 24;
+                const pillarH = pillarBottom - pillarTop;
+                const pillarLeft = 48;
+                const pillarRight = pW - 48;
+                const pillarDrawW = pillarRight - pillarLeft;
+                const maxAvg = Math.max(...pillarData.map(p => p.avg), 10);
+                const colCount = pillarData.length;
+                const groupWidth = pillarDrawW / Math.max(colCount, 1);
+                const colWidth = Math.min(groupWidth * 0.55, 56);
+
+                // Section title
+                txt('PROGRESS OVER MONTHS', pillarLeft, pillarTop + 14, 11, c.midGray, true);
+
+                // Subtle horizontal grid lines
+                doc.setDrawColor(40, 40, 44); doc.setLineWidth(0.5);
+                for (let i = 0; i <= 4; i++) {
+                    const gy = pillarBottom - (i / 4) * (pillarH - 28);
+                    doc.line(pillarLeft, gy, pillarRight, gy);
+                    txt(String(Math.round((i / 4) * maxAvg * 10) / 10), pillarLeft - 6, gy + 4, 7, c.midGray, false, 'right');
+                }
+
+                // Draw pillars with gradient effect (NYX green #00fe8a)
+                pillarData.forEach((p, i) => {
+                    const cx = pillarLeft + (i + 0.5) * groupWidth;
+                    const barH = Math.max((p.avg / maxAvg) * (pillarH - 28), 4);
+                    const bx = cx - colWidth / 2;
+                    const by = pillarBottom - barH;
+
+                    // Gradient effect: draw from bottom to top with decreasing opacity simulation
+                    const steps = 12;
+                    const stepH = barH / steps;
+                    for (let s = 0; s < steps; s++) {
+                        const t = s / steps; // 0 = bottom, 1 = top
+                        // Fade from bright green at bottom to darker green at top
+                        const r = Math.round(0 + t * 0);
+                        const g = Math.round(254 - t * 100);
+                        const b = Math.round(138 - t * 60);
+                        doc.setFillColor(r, g, b);
+                        const sy = pillarBottom - (s + 1) * stepH;
+                        doc.roundedRect(bx, sy, colWidth, stepH + 1, s === steps - 1 ? 6 : 0, s === steps - 1 ? 6 : 0, 'F');
+                    }
+
+                    // Glow effect at the bottom
+                    doc.setFillColor(0, 254, 138);
+                    doc.roundedRect(bx, pillarBottom - 3, colWidth, 3, 0, 0, 'F');
+
+                    // Value on top of pillar
+                    txt(p.avg.toFixed(1), cx, by - 8, 11, c.nyxGreen, true, 'center');
+
+                    // Month label below
+                    const mLbl = new Date(p.month + '-02T00:00:00Z').toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase();
+                    txt(mLbl, cx, pillarBottom + 16, 9, c.midGray, true, 'center');
+                });
+
+                y += pillarSection;
+            } else {
+                y += 16;
+            }
 
             // Big title area
-            y = 72;
-            txt(monthLabel.toUpperCase().split(' ')[0].toUpperCase(), 32, y + 40, 42, c.offWhite, true);
-            txt(monthLabel.split(' ')[1] || '', 32, y + 70, 22, c.midGray, false);
-            y += 90;
+            txt(monthLabel.toUpperCase().split(' ')[0].toUpperCase(), 32, y + 28, 36, c.offWhite, true);
+            txt(monthLabel.split(' ')[1] || '', 32, y + 52, 18, c.midGray, false);
+            y += 64;
 
             // Profile row
-            rRect(32, y, 50, 50, 25, c.purple);
+            rRect(32, y, 44, 44, 22, c.nyxGreen);
             const initials = employee.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-            txt(initials, 57, y + 33, 18, c.white, true, 'center');
-            txt(employee.name, 96, y + 22, 18, c.offWhite, true);
-            txt(`${employee.department} · ${employee.role}`, 96, y + 40, 11, c.midGray);
-            y += 72;
+            txt(initials, 54, y + 30, 16, c.black, true, 'center');
+            txt(employee.name, 88, y + 20, 16, c.offWhite, true);
+            txt(`${employee.department} · ${employee.role}`, 88, y + 36, 10, c.midGray);
+            y += 60;
 
             // === STAT CARDS GRID (2x2 layout with bold colors) ===
             const cardW = (pW - 32 * 3) / 2;
-            const cardH = 130;
-            const gap = 16;
+            const cardH = 100;
+            const gap = 12;
 
             // Card 1 — Total Score (hot pink)
             const c1x = 32, c1y = y;
             fill(c1x, c1y, cardW, cardH, c.hotPink);
-            txt('TOTAL SCORE', c1x + 20, c1y + 28, 10, c.white, true);
-            txt(String(review.score), c1x + 20, c1y + 90, 52, c.white, true);
-            txt('PTS', c1x + cardW - 20, c1y + 90, 14, [255, 200, 200] as C3, false, 'right');
+            txt('TOTAL SCORE', c1x + 16, c1y + 22, 9, c.white, true);
+            txt(String(review.score), c1x + 16, c1y + 70, 40, c.white, true);
+            txt('PTS', c1x + cardW - 16, c1y + 70, 12, [255, 200, 200] as C3, false, 'right');
 
             // Card 2 — Score % (electric yellow on black)
             const c2x = 32 + cardW + gap, c2y = y;
             fill(c2x, c2y, cardW, cardH, c.electricYellow);
-            txt('SCORE %', c2x + 20, c2y + 28, 10, c.black, true);
-            txt(`${scorePct}%`, c2x + 20, c2y + 90, 52, c.black, true);
-            // Draw a mini donut/arc
-            const arcCx = c2x + cardW - 50, arcCy = c2y + 75;
-            doc.setDrawColor(17, 17, 17); doc.setLineWidth(8);
-            doc.circle(arcCx, arcCy, 28, 'S');
-            if (scorePct > 0) {
-                doc.setDrawColor(...c.black); doc.setLineWidth(8);
-                // Approximate arc with line segments
-                const arcStart = -Math.PI / 2;
-                const arcEnd = arcStart + (scorePct / 100) * 2 * Math.PI;
-                for (let a = arcStart; a < arcEnd; a += 0.1) {
-                    const x1 = arcCx + 28 * Math.cos(a), y1 = arcCy + 28 * Math.sin(a);
-                    const x2 = arcCx + 28 * Math.cos(a + 0.1), y2 = arcCy + 28 * Math.sin(a + 0.1);
-                    doc.setDrawColor(17, 17, 17); doc.setLineWidth(6);
-                    doc.line(x1, y1, x2, y2);
-                }
-            }
+            txt('SCORE %', c2x + 16, c2y + 22, 9, c.black, true);
+            txt(`${scorePct}%`, c2x + 16, c2y + 70, 40, c.black, true);
 
             y += cardH + gap;
 
-            // Card 3 — Tasks Scored (mint green)
+            // Card 3 — Tasks Scored (nyx green)
             const c3x = 32, c3y = y;
-            fill(c3x, c3y, cardW, cardH, c.mintGreen);
-            txt('TASKS SCORED', c3x + 20, c3y + 28, 10, c.black, true);
-            txt(`${review.completedTaskIds.length}`, c3x + 20, c3y + 90, 52, c.black, true);
-            txt(`/ ${tasksTotal}`, c3x + 110, c3y + 90, 20, [0, 100, 70] as C3, false);
-            // Draw small task icons (dots)
-            for (let i = 0; i < Math.min(tasksTotal, 20); i++) {
-                const dx = c3x + cardW - 80 + (i % 5) * 16;
-                const dy = c3y + 50 + Math.floor(i / 5) * 16;
-                doc.setFillColor(...(i < review.completedTaskIds.length ? c.black : [0, 150, 100] as C3));
-                doc.circle(dx, dy, 5, 'F');
-            }
+            fill(c3x, c3y, cardW, cardH, c.nyxGreen);
+            txt('TASKS SCORED', c3x + 16, c3y + 22, 9, c.black, true);
+            txt(`${review.completedTaskIds.length}/${tasksTotal}`, c3x + 16, c3y + 70, 36, c.black, true);
 
-            // Card 4 — Days / Reviewed date (deep orange)
+            // Card 4 — Reviewed date (deep orange)
             const c4x = 32 + cardW + gap, c4y = y;
             fill(c4x, c4y, cardW, cardH, c.deepOrange);
-            txt('REVIEWED', c4x + 20, c4y + 28, 10, c.white, true);
-            txt(reviewedAt, c4x + 20, c4y + 90, 28, c.white, true);
-            // Decorative arrow
-            doc.setDrawColor(...c.white); doc.setLineWidth(3);
-            doc.line(c4x + cardW - 60, c4y + 60, c4x + cardW - 30, c4y + 80);
-            doc.line(c4x + cardW - 30, c4y + 80, c4x + cardW - 60, c4y + 100);
+            txt('REVIEWED', c4x + 16, c4y + 22, 9, c.white, true);
+            txt(reviewedAt, c4x + 16, c4y + 70, 24, c.white, true);
 
             y += cardH + gap;
 
@@ -428,10 +474,10 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                 doc.addPage();
                 fill(0, 0, pW, pH, c.offWhite);
 
-                // Top colored stripe
+                // Top colored stripe with logo
                 fill(0, 0, pW, 56, c.black);
-                txt('NYX', 32, 38, 22, c.white, true);
-                txt('PERFORMANCE OVER TIME', pW - 32, 38, 12, c.midGray, true, 'right');
+                try { doc.addImage(NYX_LOGO_B64, 'PNG', 24, 12, 80, 32); } catch { txt('NYX', 32, 38, 22, c.white, true); }
+                txt('PERFORMANCE OVER TIME', pW - 32, 38, 12, c.nyxGreen, true, 'right');
                 y = 80;
 
                 // ── CUMULATIVE SCORE — Big area chart style ──
@@ -549,11 +595,11 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             doc.addPage();
             fill(0, 0, pW, pH, c.white);
 
-            // Header stripe
+            // Header stripe with logo
             fill(0, 0, pW, 60, c.black);
-            txt('DETAILED REVIEW', 32, 26, 10, c.midGray, true);
-            txt(monthLabel.toUpperCase(), 32, 46, 18, c.white, true);
-            txt(`${employee.name}  ·  ${employee.department}`, pW - 32, 40, 10, c.midGray, false, 'right');
+            try { doc.addImage(NYX_LOGO_B64, 'PNG', 24, 14, 60, 24); } catch { txt('NYX', 32, 36, 16, c.white, true); }
+            txt(monthLabel.toUpperCase(), 100, 36, 14, c.nyxGreen, true);
+            txt(`${employee.name}  ·  ${employee.department}`, pW - 32, 36, 10, c.midGray, false, 'right');
             y = 80;
 
             // Meta info

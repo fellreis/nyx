@@ -47,8 +47,8 @@ const Header: React.FC<HeaderProps> = ({ activeView, onViewChange, onLogout }) =
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center gap-8">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-nyx-600 rounded-lg flex items-center justify-center">
-                                    <span className="text-white font-bold text-sm">NYX</span>
+                                <div className="w-auto h-8 bg-black rounded-lg flex items-center justify-center px-2">
+                                    <span className="text-[#00fe8a] font-black text-sm tracking-wider">NYX</span>
                                 </div>
                                 <span className="font-semibold text-lg text-gray-800 dark:text-gray-200 hidden sm:inline">Career Dev</span>
                             </div>
