@@ -458,23 +458,29 @@ const Dashboard: React.FC = () => {
         const allGoals = user.goals || [];
         const currentMonthPeriod = new Date().toISOString().slice(0, 7);
         return {
-            monthlyTasks: allGoals.filter(g => g.type === GoalType.MONTHLY_TASK && g.reviewPeriod === currentMonthPeriod),
+            // Show current month tasks + carryover (past months, not completed)
+            monthlyTasks: allGoals.filter(g => {
+                if (g.type !== GoalType.MONTHLY_TASK) return false;
+                if (g.reviewPeriod === currentMonthPeriod) return true;
+                if (!g.reviewPeriod) return g.status !== GoalStatus.COMPLETED;
+                return g.reviewPeriod < currentMonthPeriod && g.status !== GoalStatus.COMPLETED;
+            }),
             roleGoals: allGoals.filter(g => g.type === GoalType.ROLE),
         };
     }, [user.goals]);
 
     const stats = useMemo(() => {
         const userGoals = user.goals || [];
-        const completedGoals = userGoals.filter(g => g.status === 'Completed');
+        const completedGoals = userGoals.filter(g => g.status === GoalStatus.COMPLETED);
         const totalPoints = user.progressHistory.slice(-1)[0]?.score || 0;
         const averageProgress = userGoals.length > 0
             ? Math.round(userGoals.reduce((sum, g) => sum + (g.progress || 0), 0) / userGoals.length)
             : 0;
-            
+
         return {
             totalGoals: userGoals.length,
             completedGoals: completedGoals.length,
-            inProgressGoals: userGoals.filter(g => g.status === 'In Progress' || g.status === 'On Track').length,
+            inProgressGoals: userGoals.filter(g => g.status === GoalStatus.IN_PROGRESS || g.status === GoalStatus.ON_TRACK).length,
             totalPoints,
             averageProgress
         };

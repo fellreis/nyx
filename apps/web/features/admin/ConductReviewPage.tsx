@@ -132,6 +132,23 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
             }
         }
 
+        // Auto-carry-forward: move unfinished tasks (scored <7) to next month
+        const nextMonth = (() => {
+            const [y, m] = currentMonth.split('-').map(Number);
+            const d = new Date(y, m, 1); // month is 0-indexed so m already = next month
+            return d.toISOString().slice(0, 7);
+        })();
+        for (const taskId of pendingTaskIds) {
+            await updateGoal(taskId, { reviewPeriod: nextMonth } as Partial<Goal>);
+        }
+        // Also carry forward scored tasks that didn't reach completion (score >0 but <7)
+        for (const taskId of completedTaskIds) {
+            const taskRating = taskScores[String(taskId)] || 0;
+            if (taskRating > 0 && taskRating < 7) {
+                await updateGoal(taskId, { reviewPeriod: nextMonth } as Partial<Goal>);
+            }
+        }
+
         const newReview: Review = {
             createdAt: new Date().toISOString(),
             month: currentMonth,
@@ -702,7 +719,10 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-gray-500 dark:text-gray-400 text-center py-4">No monthly tasks assigned for this period.</p>
+                                    <div className="text-center py-8">
+                                        <p className="text-gray-500 dark:text-gray-400 mb-2">No monthly tasks assigned for this period.</p>
+                                        <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">Assign tasks via Manage Goals first before conducting a review.</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -868,7 +888,16 @@ const ConductReviewPage: React.FC<ConductReviewPageProps> = ({ employee, onBack 
 
                 <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700 mt-8">
                     <Button variant="secondary" size="lg" onClick={onBack}>Cancel</Button>
-                    <Button variant="primary" size="lg" onClick={handleFinalizeClick}>Finalize & Generate Report</Button>
+                    <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={handleFinalizeClick}
+                        disabled={monthlyTasks.length === 0}
+                        title={monthlyTasks.length === 0 ? 'Assign tasks via Manage Goals first' : undefined}
+                        className={monthlyTasks.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                    >
+                        Finalize & Generate Report
+                    </Button>
                 </div>
             </div>
         </div>
