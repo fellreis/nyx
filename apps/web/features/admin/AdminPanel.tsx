@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Users, Edit, FileText, Upload, KeyRound, UserPlus, ListChecks } from 'lucide-react';
+import { Users, Edit, FileText, Upload, KeyRound, UserPlus, ListChecks, LayoutTemplate } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import * as api from '../../lib/api';
 import { UserRole } from '../../types';
 import type { User } from '../../types';
 import Card from '../../components/ui/Card';
@@ -107,6 +108,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onConductReview }) => {
         }
     };
 
+    const handleApplyTemplate = async (employee: User) => {
+        if (!confirm(`Apply the default goals template to ${employee.name}? This will add all standard goals and monthly tasks.`)) return;
+        try {
+            const result = await api.applyTemplate(String(employee.id));
+            showToast(`Template applied: ${result.goalsCreated} goals added to ${employee.name}`, 'success');
+            await refreshEmployees();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to apply template.';
+            showToast(message, 'error');
+        }
+    };
+
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -186,8 +199,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onConductReview }) => {
                     password: generateTemporaryPassword(),
                     role: rowData.role as UserRole,
                     department: rowData.department,
-                    managerId: hasManagerColumn ? managerIdValue : null,
-                    roleTemplateId: 1
+                    managerId: hasManagerColumn ? managerIdValue : null
                 };
                 await registerEmployee({ ...newUser, password: newUser.password ?? generateTemporaryPassword() });
                 added++;
@@ -256,6 +268,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onConductReview }) => {
                                     >
                                         <ListChecks className="w-4 h-4 mr-2" />
                                         Manage Goals
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        className="w-full"
+                                        onClick={() => handleApplyTemplate(member)}
+                                    >
+                                        <LayoutTemplate className="w-4 h-4 mr-2" />
+                                        Apply Template
                                     </Button>
                                     <div className="flex gap-2">
                                         <Button

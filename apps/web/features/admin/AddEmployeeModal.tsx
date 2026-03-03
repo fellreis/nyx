@@ -29,7 +29,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                 department,
                 role,
                 managerId,
-                roleTemplateId: 1, // Default template
+                roleTemplateId: undefined,
             });
             // Reset form
             setName('');

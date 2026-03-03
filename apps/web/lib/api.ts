@@ -120,6 +120,14 @@ export async function listTemplates() {
   return res.items;
 }
 
+export async function applyTemplate(userId: string, templateId?: number) {
+  const res = await request<{ message: string; goalsCreated: number; totalGoals: number }>('/templates/apply', {
+    method: 'POST',
+    body: JSON.stringify({ userId, templateId: templateId ?? 1 })
+  });
+  return res;
+}
+
 export async function markNotificationRead(id: number | string) {
   const res = await request<{ notification: Notification }>(`/notifications/${id}/read`, {
     method: 'POST'

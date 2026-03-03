@@ -4,7 +4,6 @@ import { prisma } from '../../lib/prisma.js';
 import { authenticate, requireRole } from '../../middlewares/auth.js';
 import { hashPassword } from '../../utils/password.js';
 import { buildUserResponse, registerSchema } from './shared.js';
-import { buildDefaultGoals } from '../../lib/default-goals.js';
 import { mapUserToUi } from '../../lib/ui-mapper.js';
 
 const register = Router();
@@ -47,11 +46,6 @@ register.post('/auth/register', authenticate, requireRole(Role.ADMIN), async (re
           progressHistory: progressHistory ?? []
         }
       });
-
-    if (resolvedRole !== Role.ADMIN) {
-      const defaults = buildDefaultGoals(created.id, request.user?.id ?? created.id, resolvedRole);
-      await tx.goal.createMany({ data: defaults });
-    }
 
     return created;
   });
