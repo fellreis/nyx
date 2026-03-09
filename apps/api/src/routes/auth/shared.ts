@@ -11,7 +11,7 @@ export const registerSchema = z
   .object({
     email: z.string().email(),
     name: z.string().min(1),
-    password: z.string().min(6),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
     role: uiRoleSchema.optional(),
     managerId: z
       .union([z.string(), z.number(), z.null()])
@@ -81,7 +81,7 @@ export function extractSessionMetadata(req: Request) {
 export function buildSessionData(userId: string, metadata: { userAgent: string | null; ip: string | null }) {
   return {
     userId,
-    token: crypto.randomUUID(),
+    token: crypto.randomBytes(32).toString('hex'),
     expiresAt: refreshExpiresAt(),
     userAgent: metadata.userAgent,
     ip: metadata.ip

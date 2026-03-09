@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { prisma } from '../../lib/prisma.js';
-import { verifyPassword, hashPassword } from '../../utils/password.js';
+import { verifyPassword } from '../../utils/password.js';
 import { loginRateLimiter } from '../../middlewares/rate-limit.js';
 import { createSession, extractSessionMetadata, loginSchema, signUserAccessToken, buildUserResponse } from './shared.js';
 import { mapUserToUi } from '../../lib/ui-mapper.js';
@@ -21,16 +21,10 @@ login.post('/auth/login', loginRateLimiter, async (req: Request, res: Response) 
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const isHashed = user.passwordHash.startsWith('$2');
   const passwordOk = await verifyPassword(password, user.passwordHash);
 
   if (!passwordOk) {
     return res.status(401).json({ error: 'Invalid credentials' });
-  }
-
-  if (!isHashed) {
-    const newHash = await hashPassword(password);
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
   }
 
   const accessToken = signUserAccessToken(user);

@@ -5,10 +5,9 @@ export async function hashPassword(plain: string) {
 }
 
 export async function verifyPassword(plain: string, hash: string) {
-  if (hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$')) {
-    return bcrypt.compare(plain, hash);
+  // Only accept bcrypt hashes — no plaintext fallback
+  if (!hash.startsWith('$2a$') && !hash.startsWith('$2b$') && !hash.startsWith('$2y$')) {
+    return false;
   }
-
-  // Fallback for legacy plaintext passwords; caller can re-hash after successful login
-  return plain === hash;
+  return bcrypt.compare(plain, hash);
 }

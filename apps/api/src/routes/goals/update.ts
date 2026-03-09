@@ -59,6 +59,18 @@ updateGoal.patch('/goals/:id', authenticate, requireRole(Role.ADMIN, Role.MANAGE
       if (!dependsOn) {
         return res.status(400).json({ error: 'dependsOnId must reference an existing goal' });
       }
+
+      // Circular dependency check: walk the chain from the dependency
+      const visited = new Set<string>([goal.id]);
+      let current: string | null = resolvedDependsOnId;
+      while (current) {
+        if (visited.has(current)) {
+          return res.status(400).json({ error: 'Circular dependency detected' });
+        }
+        visited.add(current);
+        const upstream = await prisma.goal.findUnique({ where: { id: current }, select: { dependsOnId: true } });
+        current = upstream?.dependsOnId ?? null;
+      }
     }
   }
 

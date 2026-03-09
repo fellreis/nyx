@@ -7,12 +7,14 @@ import type { RequestWithUser } from './shared.js';
 
 const emailReview = Router();
 
+const MAX_BASE64_SIZE = 2 * 1024 * 1024; // ~2MB max attachment
+
 const emailReviewSchema = z.object({
   to: z.array(z.string().email()).min(1),
-  subject: z.string().min(1),
-  text: z.string().min(1),
-  filename: z.string().min(1),
-  contentBase64: z.string().min(1)
+  subject: z.string().min(1).max(200),
+  text: z.string().min(1).max(10000),
+  filename: z.string().min(1).max(255),
+  contentBase64: z.string().min(1).max(MAX_BASE64_SIZE, 'Attachment exceeds 2MB limit')
 });
 
 emailReview.post('/reviews/email', authenticate, requireRole(Role.ADMIN, Role.MANAGER), async (req: RequestWithUser, res: Response) => {

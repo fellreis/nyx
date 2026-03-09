@@ -1,9 +1,15 @@
 import { Router, type Request, type Response } from 'express';
 import { Role } from '@prisma/client';
+import { z } from 'zod';
 import { authenticate, requireRole } from '../middlewares/auth.js';
 import { templates } from '../lib/templates.js';
 import { buildDefaultGoals } from '../lib/default-goals.js';
 import { prisma } from '../lib/prisma.js';
+
+const applyTemplateSchema = z.object({
+  userId: z.string().min(1, 'userId is required'),
+  templateId: z.number().int().optional()
+});
 
 const templatesRouter = Router();
 
@@ -14,7 +20,11 @@ templatesRouter.get('/templates', authenticate, async (_req, res: Response) => {
 // Apply a template to a user (creates default goals)
 templatesRouter.post('/templates/apply', authenticate, requireRole(Role.ADMIN), async (req: Request, res: Response) => {
   const request = req as Request & { user?: { id: string; role: Role } };
-  const { userId, templateId } = req.body;
+  const parsed = applyTemplateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() });
+  }
+  const { userId, templateId } = parsed.data;
 
   if (!userId) {
     return res.status(400).json({ error: 'userId is required' });

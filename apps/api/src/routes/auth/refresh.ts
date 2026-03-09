@@ -3,10 +3,11 @@ import { prisma } from '../../lib/prisma.js';
 import { buildSessionData, extractSessionMetadata, refreshSchema, signUserAccessToken } from './shared.js';
 import { mapUserToUi } from '../../lib/ui-mapper.js';
 import { readRefreshCookie, setRefreshCookie } from '../../utils/cookies.js';
+import { refreshRateLimiter } from '../../middlewares/rate-limit.js';
 
 const refresh = Router();
 
-refresh.post('/auth/refresh', async (req: Request, res: Response) => {
+refresh.post('/auth/refresh', refreshRateLimiter, async (req: Request, res: Response) => {
   const parsed = refreshSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() });

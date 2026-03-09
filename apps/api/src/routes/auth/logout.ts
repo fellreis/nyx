@@ -1,11 +1,12 @@
 import { Router, type Request, type Response } from 'express';
 import { prisma } from '../../lib/prisma.js';
+import { authenticate } from '../../middlewares/auth.js';
 import { logoutSchema } from './shared.js';
 import { clearRefreshCookie, readRefreshCookie } from '../../utils/cookies.js';
 
 const logout = Router();
 
-logout.post('/auth/logout', async (req: Request, res: Response) => {
+logout.post('/auth/logout', authenticate, async (req: Request, res: Response) => {
   const parsed = logoutSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() });

@@ -2,13 +2,14 @@ import { Router, type Request, type Response } from 'express';
 import { Role } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { authenticate, requireRole } from '../../middlewares/auth.js';
+import { registerRateLimiter } from '../../middlewares/rate-limit.js';
 import { hashPassword } from '../../utils/password.js';
 import { buildUserResponse, registerSchema } from './shared.js';
 import { mapUserToUi } from '../../lib/ui-mapper.js';
 
 const register = Router();
 
-register.post('/auth/register', authenticate, requireRole(Role.ADMIN), async (req: Request, res: Response) => {
+register.post('/auth/register', registerRateLimiter, authenticate, requireRole(Role.ADMIN), async (req: Request, res: Response) => {
   const request = req as Request & { user?: { id: string; role: Role } };
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
